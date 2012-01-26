@@ -256,15 +256,46 @@ int __cdecl main(int argc, char **argv)
 		else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN){
 			if(ev.mouse.button & 1){
 				cout << "wcisnieta myszka!" << endl;
-				int x, y;
+				int x, y, error=0, error2=4;
 				x = ev.mouse.x/SIZE_TILE;
 				y = ev.mouse.y/SIZE_TILE;
 				index = y*8+x;
-				board[index] = pionki;
+				if(board[index]=='e'){
+					if(index >= 0 && board[index-8]==pionki){
+						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+					}else if(index <= 63  && board[index+8]==pionki){
+						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+					}else if(index >=0 && board[index-1]==pionki){
+						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+					}else if(index <=63 && board[index+1]==pionki){
+						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+					}else{
+						if(board[index-8]=='e'){
+								error++;
+						}
+						if(board[index+8]=='e'){
+								error++;
+						}
+						if(board[index-1]=='e'){
+							error++;
+						}
+						if(board[index+1]=='e'){
+								error++;
+						}
+
+						if(error==4){
+							al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+						}else{
+							//mozna postawic
+							board[index] = pionki;
+							SendData(ConnectSocket, itoa(index, sendbuf, 10));
+							ruch = true;
+						}
+					}
+				}else{
+					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
+				}
 				
-					//cout << "Gracz " << pionki << "wysla index: " << *sendbuf << endl;
-				SendData(ConnectSocket, itoa(index, sendbuf, 10));
-				ruch = true;
 
 				
 				/*
@@ -280,7 +311,7 @@ int __cdecl main(int argc, char **argv)
 				
 				
 				
-				cout << "podniesiona myszka" << endl;
+				//cout << "podniesiona myszka" << endl;
 			}
 		}
 		if(redraw && al_event_queue_is_empty(event_queue)){

@@ -1,11 +1,11 @@
-﻿Build started 2012-01-26 04:16:30.
+﻿Build started 2012-01-26 06:25:08.
      1>Project "C:\Users\Marcin\Desktop\Reversi\client\client.vcxproj" on node 3 (build target(s)).
      1>InitializeBuildStatus:
          Creating "Debug\client.unsuccessfulbuild" because "AlwaysCreate" was specified.
        ClCompile:
          c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt client.cpp
          client.cpp
-     1>c:\users\marcin\desktop\reversi\client\client.cpp(266): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name: _itoa. See online help for details.
+     1>c:\users\marcin\desktop\reversi\client\client.cpp(323): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name: _itoa. See online help for details.
                  c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdlib.h(867) : see declaration of 'itoa'
      1>c:\users\marcin\desktop\reversi\client\client.cpp(65): warning C4101: 'name' : unreferenced local variable
        ManifestResourceCompile:
@@ -28,4 +28,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.11
+Time Elapsed 00:00:02.04
