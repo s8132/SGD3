@@ -119,11 +119,31 @@ int __cdecl main(void)
     // No longer need server socket
     closesocket(ListenSocket);
 
+	SendData(ClientSocket, "w");
+	SendData(ClientSocket2, "b");
+
 	bool done = false;
 	int tmp=0;
 	while(!done){
 		
+		cout << "\nZaczyna graczI" << endl;
+		ReceiveData(ClientSocket, recvbufOne, recvbuflen);
+		cout << "GraczI: " << recvbufOne[0] << endl;
+		SendData(ClientSocket2, recvbufOne);
+		cout << "Wysylam do graczaII, pole graczaI: " << recvbufOne << endl;
+		cout << "int otrzymanej wiadomosci: " << atoi(recvbufOne) << endl;
 
+		cout <<"\nKolej graczaII" << endl;
+		ReceiveData(ClientSocket2, recvbufTwo, recvbuflen);
+		cout <<"GraczII: " << recvbufTwo << endl;
+		SendData(ClientSocket, recvbufTwo);
+		cout << "Wysylam do graczaI, pole graczaII: " << recvbufTwo << endl;
+		cout << "int otrzymanej wiadomosci: " << (int)(recvbufTwo-48) << endl;
+
+
+		
+
+		/*
 		printf ("Move the first player:\n");
 		ReceiveData(ClientSocket, recvbufOne, recvbuflen);
 		cout << "FirstPlayer> " << recvbufOne << endl;
@@ -133,7 +153,7 @@ int __cdecl main(void)
 		cout << "SecondPlayer> " << recvbufTwo << endl;
 		
 
-	/*	if(strcmp(recvbufOne, recvbufTwo)==0){
+		if(strcmp(recvbufOne, recvbufTwo)==0){
 			if(strcmp(recvbufOne, "f") == 0 || strcmp(recvbufTwo, "f")==0){
 				char *sendbuf = "3";
 				SendData(ClientSocket, sendbuf);

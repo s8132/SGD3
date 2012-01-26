@@ -158,6 +158,7 @@ int __cdecl main(int argc, char **argv)
 	al_install_mouse();
 	al_init_image_addon();
 	al_init_font_addon();
+	al_init_ttf_addon();
 
 	ALLEGRO_BITMAP *window = al_create_bitmap(width, height);
 
@@ -170,7 +171,7 @@ int __cdecl main(int argc, char **argv)
 	ALLEGRO_BITMAP *lose = al_create_bitmap(width, height);
 	ALLEGRO_BITMAP *text = al_create_bitmap(width, height);
 
-	ALLEGRO_FONT *font = al_load_ttf_font("font.ttf", 12, 0);
+	ALLEGRO_FONT *font = al_load_ttf_font("pirulen.ttf", 24, 0);
 
 	if(!font){
 		cout << "nie udalo sie wczytac cziconki" << endl;
@@ -202,58 +203,156 @@ int __cdecl main(int argc, char **argv)
 		ypos = ypos + SIZE_TILE;
 	}
 
-	bool done = false;
+	bool done = false, redraw=false;
 	double timer = al_current_time();
-	int r=0;
-	while(!done){
+	int r=0, index, count=0;
+	char board[63];
+
+	for(int i=0; i<64; i++){
+		if(i==27 || i==36){
+			board[i]='w';
+		}else if(i==28 || i==35){
+			board[i]='b';
+		}else{
+			board[i]='e';
+		}
+	}
+
+	ALLEGRO_TIMER *time = al_create_timer(1.0 / 60);
+
+	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
+	event_queue = al_create_event_queue();
+	al_register_event_source(event_queue, al_get_timer_event_source(time));
+	al_register_event_source(event_queue, al_get_mouse_event_source());
+
+	al_start_timer(time);
 	
-		al_set_target_bitmap(window);
-		al_clear_to_color(al_map_rgb(r, 0, 0));
-		//al_convert_mask_to_alpha(this->buff, al_map_rgb(0, 0, 0));
+	cout << "\nTablica pol: " << endl;
 
-		al_draw_bitmap(net, 0, 0, 0);
+	
+	ReceiveData(ConnectSocket, recvbuf, recvbuflen);
+	char *odebrane = recvbuf;
+	char pionki = *odebrane, pionkiRywal;
 
-		al_draw_bitmap(white, 150, 150, 0);
-		al_draw_bitmap(white, 200, 200, 0);
-		al_draw_bitmap(black, 200, 150, 0);
-		al_draw_bitmap(black, 150, 200, 0);
+	bool ruch;
 
-		al_get_keyboard_state(&keyboard_state);
-		al_get_mouse_state(&mouse_state);
+	if(pionki=='w'){
+		pionkiRywal='b';
+		ruch = false;
+		cout <<"twoj ruch" << endl;
+	}else{
+		pionkiRywal='w';
+		ruch = true;
+		cout <<"zaczyna rywal" << endl;
+	}
 
-		if(al_key_down(&keyboard_state, ALLEGRO_KEY_ESCAPE)){
-			char *sendbuf = "koniec";
-			SendData(ConnectSocket, sendbuf);
-			done=true;
-		}
+	
 
+	while(!done){
 		
-		if(al_mouse_button_down(&mouse_state, 1)){
-			if(al_current_time() >= timer+0.5){
-				//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
-				timer = al_current_time();
+		ALLEGRO_EVENT ev;
+		al_wait_for_event(event_queue, &ev);
+		if(ev.type == ALLEGRO_EVENT_TIMER) redraw = true;
+		else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN){
+			if(ev.mouse.button & 1){
+				cout << "wcisnieta myszka!" << endl;
+				int x, y;
+				x = ev.mouse.x/SIZE_TILE;
+				y = ev.mouse.y/SIZE_TILE;
+				index = y*8+x;
+				board[index] = pionki;
+				
+					//cout << "Gracz " << pionki << "wysla index: " << *sendbuf << endl;
+				SendData(ConnectSocket, itoa(index, sendbuf, 10));
+				ruch = true;
+
+				
+				/*
+				ReceiveData(ConnectSocket, recvbuf, recvbuflen);
+				index = (int)(recvbuf-48);
+				board[index] = pionkiRywal;
+				*/
+
+				count++;
 			}
-
+		} else if(ev.type = ALLEGRO_EVENT_MOUSE_BUTTON_UP){
+			if(ev.mouse.button & 1){
+				
+				
+				
+				cout << "podniesiona myszka" << endl;
+			}
 		}
+		if(redraw && al_event_queue_is_empty(event_queue)){
+				al_set_target_bitmap(window);
+				al_clear_to_color(al_map_rgb(0, 0, 255));
+				//al_convert_mask_to_alpha(this->buff, al_map_rgb(0, 0, 0));
+
+				al_draw_bitmap(net, 0, 0, 0);
+
+				/*
+				ReceiveData(ConnectSocket, recvbuf, recvbuflen);
+				index = (int)(recvbuf-48);
+				board[index] = pionkiRywal;
+				*/
+				
+				
+			
+				for(int i=0; i<64; i++){
+					int x, y;
+					x = i%8*SIZE_TILE;
+					y = i/8*SIZE_TILE;
+
+					if(board[i]=='w'){
+						al_draw_bitmap(white, x, y, 0);
+						//cout << "White x = " << x << ", y = " << y << endl;
+					}
+
+					if(board[i]=='b'){
+						al_draw_bitmap(black, x, y, 0);
+						//cout << "Black x = " << x << ", y = " << y << endl;
+					}
+				}
+				
+				
+				al_get_keyboard_state(&keyboard_state);
+				al_get_mouse_state(&mouse_state);
+
+				if(al_key_down(&keyboard_state, ALLEGRO_KEY_ESCAPE)){
+					char *sendbuf = "koniec";
+					SendData(ConnectSocket, sendbuf);
+					done=true;
+				}
+
 		
-		if(al_current_time() >= timer+0.2){
-				//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
-				timer = al_current_time();
-				r++;
+				if(al_mouse_button_down(&mouse_state, 1)){
+					if(al_current_time() >= timer+0.5){
+						//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
+						timer = al_current_time();
+					}
+
+				}
+		
+				if(al_current_time() >= timer+0.2){
+						//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
+						timer = al_current_time();
+						r++;
+				}
+
+				if(ruch){
+					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Ruch przeciwnika");
+				}
+
+				al_set_target_bitmap(al_get_backbuffer(display));            
+				al_draw_bitmap(window, 0, 0, 0);
+		
+				al_flip_display();
 		}
 
-		al_draw_bitmap_region(white, 1, 1, 20, 20, 3, 3, 0);
-		
-		//al_draw_bitmap(this->point, xpos, ypos, NULL);
-
-		al_set_target_bitmap(al_get_backbuffer(display));            
-		//al_clear_to_color(al_map_rgb(57, 10, 70));
-		al_draw_bitmap(window, 0, 0, 0);
-		
-		al_flip_display();
-		
-		if(r==255){
-			r=0;
+		if(ruch){
+					ReceiveData(ConnectSocket, recvbuf, recvbuflen);
+					board[atoi(recvbuf)] = pionkiRywal;
+					ruch=false;
 		}
 		
 	}
