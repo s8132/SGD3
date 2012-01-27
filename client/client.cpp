@@ -234,7 +234,7 @@ int __cdecl main(int argc, char **argv)
 	char *odebrane = recvbuf;
 	char pionki = *odebrane, pionkiRywal;
 
-	bool ruch;
+	bool ruch, zamien=false;
 
 	if(pionki=='w'){
 		pionkiRywal='b';
@@ -290,14 +290,51 @@ int __cdecl main(int argc, char **argv)
 							board[index] = pionki;
 							SendData(ConnectSocket, itoa(index, sendbuf, 10));
 							ruch = true;
+							zamien = true;
 						}
 					}
 				}else{
 					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
 				}
 				
+				if(zamien){
+						//checkUp zamien
+						for(int i=index-16; i>=index%8; i=i-8){
+							if(board[i]==pionki){
+								for(int j=i; j<=index; j=j+8){
+									board[j]=pionki;
+								}
+							}
+							if(board[i]=='e') break;
+						}
 
-				
+						//checkDown zamien
+						for(int i=index+16; i<=7*8+index%8; i=i+8){
+							if(board[i]==pionki){
+								for(int j=i; j>=index; j=j-8){
+									board[j]=pionki;
+								}
+							}
+						}
+
+						//chekLeft zamien
+						for(int i=index-2; i>=index/8*8; i=i--){
+							if(board[i]==pionki){
+								for(int j=i; j<=index; j=j++){
+									board[j]=pionki;
+								}
+							}
+						}
+
+						//chekRight zamien
+						for(int i=index+2; i<=index/8*8+8; i=i++){
+							if(board[i]==pionki){
+								for(int j=i; j>=index; j=j--){
+									board[j]=pionki;
+								}
+							}
+						}
+				}
 				/*
 				ReceiveData(ConnectSocket, recvbuf, recvbuflen);
 				index = (int)(recvbuf-48);
@@ -317,18 +354,11 @@ int __cdecl main(int argc, char **argv)
 		if(redraw && al_event_queue_is_empty(event_queue)){
 				al_set_target_bitmap(window);
 				al_clear_to_color(al_map_rgb(0, 0, 255));
-				//al_convert_mask_to_alpha(this->buff, al_map_rgb(0, 0, 0));
-
 				al_draw_bitmap(net, 0, 0, 0);
 
-				/*
-				ReceiveData(ConnectSocket, recvbuf, recvbuflen);
-				index = (int)(recvbuf-48);
-				board[index] = pionkiRywal;
-				*/
 				
-				
-			
+
+				//Rysuj pionki z tablicy
 				for(int i=0; i<64; i++){
 					int x, y;
 					x = i%8*SIZE_TILE;
@@ -355,21 +385,6 @@ int __cdecl main(int argc, char **argv)
 					done=true;
 				}
 
-		
-				if(al_mouse_button_down(&mouse_state, 1)){
-					if(al_current_time() >= timer+0.5){
-						//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
-						timer = al_current_time();
-					}
-
-				}
-		
-				if(al_current_time() >= timer+0.2){
-						//al_draw_text(font, al_map_rgb(0, 0, 255), width/2, height/2, ALLEGRO_ALIGN_CENTRE, "Cos tam");
-						timer = al_current_time();
-						r++;
-				}
-
 				if(ruch){
 					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Ruch przeciwnika");
 				}
@@ -382,7 +397,48 @@ int __cdecl main(int argc, char **argv)
 
 		if(ruch){
 					ReceiveData(ConnectSocket, recvbuf, recvbuflen);
-					board[atoi(recvbuf)] = pionkiRywal;
+					index = atoi(recvbuf);
+					board[index] = pionkiRywal;
+
+
+					//checkUp zamien
+				for(int i=index-16; i>=index%8; i=i-8){
+					if(board[i]==pionkiRywal){
+						for(int j=i; j<=index; j=j+8){
+							board[j]=pionkiRywal;
+						}
+					}
+					if(board[i]=='e') break;
+				}
+
+				//checkDown zamien
+				for(int i=index+16; i<=7*8+index%8; i=i+8){
+					if(board[i]==pionkiRywal){
+						for(int j=i; j>=index; j=j-8){
+							board[j]=pionkiRywal;
+						}
+					}
+				}
+
+				//chekLeft zamien
+				for(int i=index-2; i>=index/8*8; i=i--){
+					if(board[i]==pionkiRywal){
+						for(int j=i; j<=index; j=j++){
+							board[j]=pionkiRywal;
+						}
+					}
+				}
+
+				//chekRight zamien
+				for(int i=index+2; i<=index/8*8+8; i=i++){
+					if(board[i]==pionkiRywal){
+						for(int j=i; j>=index; j=j--){
+							board[j]=pionkiRywal;
+						}
+					}
+				}
+				
+
 					ruch=false;
 		}
 		
