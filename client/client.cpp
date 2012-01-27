@@ -205,7 +205,7 @@ int __cdecl main(int argc, char **argv)
 
 	bool done = false, redraw=false;
 	double timer = al_current_time();
-	int r=0, index, count=0;
+	int r=0, index, count=0, koniecPuste=0, koniecWhite=0, koniecBlack=0;
 	char board[63];
 
 	for(int i=0; i<64; i++){
@@ -356,7 +356,21 @@ int __cdecl main(int argc, char **argv)
 				al_clear_to_color(al_map_rgb(0, 0, 255));
 				al_draw_bitmap(net, 0, 0, 0);
 
-				
+				for(int i=0; i<=64; i++){
+					if(board[i]=='e'){
+						koniecPuste++;
+					}
+					if(board[i]=='w'){
+						koniecWhite++;
+					}
+					if(board[i]=='b'){
+						koniecBlack++;
+					}
+				}
+
+				if(koniecPuste==0 || koniecWhite==0 || koniecBlack==0){
+					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 01, 0, "Koniec gry");
+				}
 
 				//Rysuj pionki z tablicy
 				for(int i=0; i<64; i++){
