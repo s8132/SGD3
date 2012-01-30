@@ -1,4 +1,4 @@
-﻿Build started 2012-01-27 01:55:50.
+﻿Build started 2012-01-30 14:55:16.
      1>Project "C:\Users\Marcin\Desktop\Reversi\srv\srv.vcxproj" on node 2 (build target(s)).
      1>InitializeBuildStatus:
          Creating "Debug\srv.unsuccessfulbuild" because "AlwaysCreate" was specified.
@@ -17,4 +17,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:00.08
+Time Elapsed 00:00:00.09

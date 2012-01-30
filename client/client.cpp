@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <fstream>
 #include "Tactic.h"
-#include <ctime>
 #include <allegro5\allegro.h>
 #include <allegro5\allegro5.h>
 #include <allegro5\keyboard.h>
@@ -21,7 +21,7 @@
 #include <allegro5\allegro_image.h>
 #include <allegro5\allegro_font.h>
 #include <allegro5\allegro_ttf.h>
-
+#include <set>
 
 using namespace std;
 
@@ -43,10 +43,23 @@ bool SendData(SOCKET ClientScoket, char* buffer)
 	return true;
 }
 
+bool SendDataInt(SOCKET ClientScoket, int value)
+{
+	int sendInt = htonl(value);
+	send(ClientScoket, (char *)&sendInt, sizeof(long), 0);
+	return true;
+}
+
 bool ReceiveData(SOCKET ClientSocket, char* buffer, int size)
 {
 	int i = recv(ClientSocket, buffer, size, 0);
 	buffer[i]='\0';
+	return true;
+}
+
+bool ReceiveDataInt(SOCKET ClientSocket, int value)
+{
+	int i = recv(ClientSocket, (char *)&value, sizeof(long), 0);
 	return true;
 }
 
@@ -60,6 +73,7 @@ int __cdecl main(int argc, char **argv)
                     *ptr = NULL,
                     hints;
     //char *sendbuf = "this is a test";
+	int recvValue[STRLEN];
     char recvbuf[DEFAULT_BUFLEN];
 	char sendbuf[STRLEN];
 	char name[DEFAULT_BUFLEN];
@@ -117,6 +131,16 @@ int __cdecl main(int argc, char **argv)
 
     freeaddrinfo(result);
 
+	int sposobGry=0;
+
+	cout << "-----------REVERSI------------" << endl;
+	cout << "Wybierz sposob gry:" << endl;
+	cout << "1. Bede gral sam" << endl;
+	cout << "2. Taktyka losowa" << endl;
+	cout << "3. Taktyka szukaj wolnego brzegu" << endl;
+	cout << "Wpisz numer sposobu gry: ";
+	cin >> sposobGry;
+
     if (ConnectSocket == INVALID_SOCKET) {
         printf("Unable to connect to server!\n");
         WSACleanup();
@@ -166,6 +190,9 @@ int __cdecl main(int argc, char **argv)
 
 	ALLEGRO_BITMAP *black = al_load_bitmap("black2.png");
 	ALLEGRO_BITMAP *white = al_load_bitmap("white.png");
+	ALLEGRO_BITMAP *pole = al_load_bitmap("question.gif");
+
+	al_convert_mask_to_alpha(pole, al_map_rgb(255, 255, 255));
 
 	ALLEGRO_BITMAP *win = al_create_bitmap(width, height);
 	ALLEGRO_BITMAP *lose = al_create_bitmap(width, height);
@@ -175,6 +202,10 @@ int __cdecl main(int argc, char **argv)
 
 	if(!font){
 		cout << "nie udalo sie wczytac cziconki" << endl;
+	}
+
+	if(!pole){
+		cout << "Nie udalo sie wczytac pola" << endl;
 	}
 
 	ALLEGRO_KEYBOARD_STATE keyboard_state;
@@ -205,8 +236,9 @@ int __cdecl main(int argc, char **argv)
 
 	bool done = false, redraw=false;
 	double timer = al_current_time();
-	int r=0, index, count=0, koniecPuste=0, koniecWhite=0, koniecBlack=0;
+	int r=0, index, count=0, koniecPuste=0, koniecWhite=0, koniecBlack=0, error=0;
 	char board[63];
+	short indeks;
 
 	for(int i=0; i<64; i++){
 		if(i==27 || i==36){
@@ -218,17 +250,15 @@ int __cdecl main(int argc, char **argv)
 		}
 	}
 
-	ALLEGRO_TIMER *time = al_create_timer(1.0 / 60);
+	ALLEGRO_TIMER *czas = al_create_timer(1.0 / 60);
 
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
 	event_queue = al_create_event_queue();
-	al_register_event_source(event_queue, al_get_timer_event_source(time));
+	al_register_event_source(event_queue, al_get_timer_event_source(czas));
 	al_register_event_source(event_queue, al_get_mouse_event_source());
+	al_register_event_source(event_queue, al_get_keyboard_event_source());
 
-	al_start_timer(time);
-	
-	cout << "\nTablica pol: " << endl;
-
+	al_start_timer(czas);
 	
 	ReceiveData(ConnectSocket, recvbuf, recvbuflen);
 	char *odebrane = recvbuf;
@@ -239,138 +269,89 @@ int __cdecl main(int argc, char **argv)
 	if(pionki=='w'){
 		pionkiRywal='b';
 		ruch = false;
-		cout <<"twoj ruch" << endl;
 	}else{
 		pionkiRywal='w';
 		ruch = true;
-		cout <<"zaczyna rywal" << endl;
 	}
 
+	set<int> polaDoWstawiania;
+	set<int>::iterator checkPole, drawWolnePola;
 	
 
 	while(!done){
 		
+		
+
 		ALLEGRO_EVENT ev;
 		al_wait_for_event(event_queue, &ev);
 		if(ev.type == ALLEGRO_EVENT_TIMER) redraw = true;
 		else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN){
 			if(ev.mouse.button & 1){
-				cout << "wcisnieta myszka!" << endl;
-				int x, y, error=0, error2=4;
-				x = ev.mouse.x/SIZE_TILE;
-				y = ev.mouse.y/SIZE_TILE;
-				index = y*8+x;
-				if(board[index]=='e'){
-					if(index >= 0 && board[index-8]==pionki){
-						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-					}else if(index <= 63  && board[index+8]==pionki){
-						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-					}else if(index >=0 && board[index-1]==pionki){
-						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-					}else if(index <=63 && board[index+1]==pionki){
-						al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-					}else{
-						if(board[index-8]=='e'){
-								error++;
-						}
-						if(board[index+8]=='e'){
-								error++;
-						}
-						if(board[index-1]=='e'){
-							error++;
-						}
-						if(board[index+1]=='e'){
-								error++;
-						}
+				if(sposobGry==1){
+						int x, y, error2=4;
+						x = ev.mouse.x/SIZE_TILE;
+						y = ev.mouse.y/SIZE_TILE;
+						index = y*8+x;
+						
+						checkPole = polaDoWstawiania.find(index);
 
-						if(error==4){
-							al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-						}else{
+						if(checkPole!=polaDoWstawiania.end()){
 							//mozna postawic
 							board[index] = pionki;
-							SendData(ConnectSocket, itoa(index, sendbuf, 10));
+							SendDataInt(ConnectSocket, index);
 							ruch = true;
 							zamien = true;
+							polaDoWstawiania.clear();
 						}
-					}
-				}else{
-					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, 0, "Nie mozna tu stawiac!");
-				}
-				
-				if(zamien){
-						//checkUp zamien
-						for(int i=index-16; i>=index%8; i=i-8){
-							if(board[i]==pionki){
-								for(int j=i; j<=index; j=j+8){
-									board[j]=pionki;
+												
+						if(zamien){
+								//checkUp zamien
+								for(int i=index-16; i>=index%8; i=i-8){
+									if(board[i]==pionki){
+										for(int j=i; j<=index; j=j+8){
+											board[j]=pionki;
+										}
+									}
+									if(board[i]=='e') break;
 								}
-							}
-							if(board[i]=='e') break;
-						}
 
-						//checkDown zamien
-						for(int i=index+16; i<=7*8+index%8; i=i+8){
-							if(board[i]==pionki){
-								for(int j=i; j>=index; j=j-8){
-									board[j]=pionki;
+								//checkDown zamien
+								for(int i=index+16; i<=7*8+index%8; i=i+8){
+									if(board[i]==pionki){
+										for(int j=i; j>=index; j=j-8){
+											board[j]=pionki;
+										}
+									}
 								}
-							}
-						}
 
-						//chekLeft zamien
-						for(int i=index-2; i>=index/8*8; i=i--){
-							if(board[i]==pionki){
-								for(int j=i; j<=index; j=j++){
-									board[j]=pionki;
+								//chekLeft zamien
+								for(int i=index-2; i>=index/8*8; i=i--){
+									if(board[i]==pionki){
+										for(int j=i; j<=index; j=j++){
+											board[j]=pionki;
+										}
+									}
 								}
-							}
-						}
 
-						//chekRight zamien
-						for(int i=index+2; i<=index/8*8+8; i=i++){
-							if(board[i]==pionki){
-								for(int j=i; j>=index; j=j--){
-									board[j]=pionki;
+								//chekRight zamien
+								for(int i=index+2; i<=index/8*8+8; i=i++){
+									if(board[i]==pionki){
+										for(int j=i; j>=index; j=j--){
+											board[j]=pionki;
+										}
+									}
 								}
-							}
 						}
 				}
-				/*
-				ReceiveData(ConnectSocket, recvbuf, recvbuflen);
-				index = (int)(recvbuf-48);
-				board[index] = pionkiRywal;
-				*/
-
-				count++;
-			}
-		} else if(ev.type = ALLEGRO_EVENT_MOUSE_BUTTON_UP){
-			if(ev.mouse.button & 1){
-				
-				
-				
-				//cout << "podniesiona myszka" << endl;
 			}
 		}
+		
 		if(redraw && al_event_queue_is_empty(event_queue)){
 				al_set_target_bitmap(window);
 				al_clear_to_color(al_map_rgb(0, 0, 255));
 				al_draw_bitmap(net, 0, 0, 0);
 
-				for(int i=0; i<=64; i++){
-					if(board[i]=='e'){
-						koniecPuste++;
-					}
-					if(board[i]=='w'){
-						koniecWhite++;
-					}
-					if(board[i]=='b'){
-						koniecBlack++;
-					}
-				}
-
-				if(koniecPuste==0 || koniecWhite==0 || koniecBlack==0){
-					al_draw_text(font, al_map_rgb(255, 0, 0), 10, 01, 0, "Koniec gry");
-				}
+				
 
 				//Rysuj pionki z tablicy
 				for(int i=0; i<64; i++){
@@ -388,8 +369,124 @@ int __cdecl main(int argc, char **argv)
 						//cout << "Black x = " << x << ", y = " << y << endl;
 					}
 				}
+
+				//Gdize mozna postawic
+				for(int i=0; i<64; i++){
+					//checkUp
+					if(board[i]=='e' && board[i-8]==pionkiRywal){
+						for(int j=i-16; j>=i%8; j=j-8){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+					//checkUpLeft
+					if(board[i]=='e' && board[i-9]==pionkiRywal && (i!=0*8+i || i!=i*8+0)){
+						for(int j=i-18; j>=0; j=j-9){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+
+					//checkUpRight
+					if(board[i]=='e' && board[i-7]==pionkiRywal && (i!=0*8+i || i!=i*8+7)){
+						for(int j=i-14; j>=7; j=j-7){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+
+					//checkDown
+					if(board[i]=='e' && board[i+8]==pionkiRywal){
+						for(int j=i+16; j<=7*8+i%8 ; j=j+8){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+
+					//checkDownLeft
+					if(board[i]=='e' && board[i+7]==pionkiRywal && (i!=7*8+i || i!=i*8+0)){
+						for(int j=i+14; j<=i%8+7; j=j+7){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+
+					//check DownRight
+					if(board[i]=='e' && board[i+9]==pionkiRywal && (i!=7*8+i || i!=i*8+7)){
+						for(int j=i+18; j<=63; j=j+9){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+
+					//checkLeft
+					if(board[i]=='e' && board[i-1]==pionkiRywal){
+						for(int j=i-2; j>=i/8*8 ; j--){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+					
+					//checkRight
+					
+					if(board[i]=='e' && board[i+1]==pionkiRywal){
+						for(int j=i+2; j<=i/8*8+7; j++){
+							if(board[j]=='e'){
+								break;
+							}
+							if(board[j]==pionki){
+								polaDoWstawiania.insert(i);
+								//cout << "Mozna postawic na polu nr: " << i << endl;
+							}
+						}
+					}
+					
+				}
+
+				int u, v;
+				for(drawWolnePola=polaDoWstawiania.begin(); drawWolnePola!=polaDoWstawiania.end(); ++drawWolnePola){
+					u = *drawWolnePola%8*SIZE_TILE;
+					v = *drawWolnePola/8*SIZE_TILE;
+					al_draw_bitmap(pole, u, v, 0);
+				}
 				
 				
+
 				al_get_keyboard_state(&keyboard_state);
 				al_get_mouse_state(&mouse_state);
 
@@ -408,52 +505,54 @@ int __cdecl main(int argc, char **argv)
 		
 				al_flip_display();
 		}
-
+		
 		if(ruch){
-					ReceiveData(ConnectSocket, recvbuf, recvbuflen);
-					index = atoi(recvbuf);
-					board[index] = pionkiRywal;
+			
+			int netInt, myInt;
 
+			recv(ConnectSocket, (char *)&netInt, sizeof(long), 0);
+			myInt = (int)ntohl(netInt);
+			board[myInt] = pionkiRywal;
 
-					//checkUp zamien
-				for(int i=index-16; i>=index%8; i=i-8){
-					if(board[i]==pionkiRywal){
-						for(int j=i; j<=index; j=j+8){
-							board[j]=pionkiRywal;
-						}
-					}
-					if(board[i]=='e') break;
-				}
-
-				//checkDown zamien
-				for(int i=index+16; i<=7*8+index%8; i=i+8){
-					if(board[i]==pionkiRywal){
-						for(int j=i; j>=index; j=j-8){
-							board[j]=pionkiRywal;
-						}
+			//checkUp zamien
+			for(int i=myInt-16; i>=myInt%8; i=i-8){
+				if(board[i]==pionkiRywal){
+					for(int j=i; j<=myInt; j=j+8){
+						board[j]=pionkiRywal;
 					}
 				}
+				if(board[i]=='e') break;
+			}
+			
 
-				//chekLeft zamien
-				for(int i=index-2; i>=index/8*8; i=i--){
-					if(board[i]==pionkiRywal){
-						for(int j=i; j<=index; j=j++){
-							board[j]=pionkiRywal;
-						}
+			//checkDown zamien
+			for(int i=myInt+16; i<=7*8+myInt%8; i=i+8){
+				if(board[i]==pionkiRywal){
+					for(int j=i; j>=myInt; j=j-8){
+						board[j]=pionkiRywal;
 					}
 				}
+			}
 
-				//chekRight zamien
-				for(int i=index+2; i<=index/8*8+8; i=i++){
-					if(board[i]==pionkiRywal){
-						for(int j=i; j>=index; j=j--){
-							board[j]=pionkiRywal;
-						}
+			//chekLeft zamien
+			for(int i=myInt-2; i>=myInt/8*8; i=i--){
+				if(board[i]==pionkiRywal){
+					for(int j=i; j<=myInt; j=j++){
+						board[j]=pionkiRywal;
 					}
 				}
-				
+			}
 
-					ruch=false;
+			//chekRight zamien
+			for(int i=myInt+2; i<=myInt/8*8+8; i=i++){
+				if(board[i]==pionkiRywal){
+					for(int j=i; j>=myInt; j=j--){
+						board[j]=pionkiRywal;
+					}
+				}
+			}
+			polaDoWstawiania.clear();
+			ruch=false;
 		}
 		
 	}

@@ -75,13 +75,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="board.cpp" />
     <ClCompile Include="client.cpp" />
-    <ClCompile Include="File.cpp" />
-    <ClCompile Include="Tactic.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="File.h" />
-    <ClInclude Include="Tactic.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\srv\srv.vcxproj">
@@ -93,6 +88,9 @@
     <None Include="font.ttf" />
     <None Include="pirulen.ttf" />
     <None Include="white.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="board.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

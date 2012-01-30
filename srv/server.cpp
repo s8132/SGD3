@@ -18,11 +18,19 @@ using namespace std;
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT 1313
 
-const int STRLEN = 256;
+const int STRLEN = 256; 
+
 
 bool SendData(SOCKET ClientScoket, char* buffer)
 {
 	send(ClientScoket, buffer, strlen(buffer), 0);
+	return true;
+}
+
+bool SendDataInt(SOCKET ClientScoket, int value)
+{
+	int sendInt = htonl(value);
+	send(ClientScoket, (char *)&sendInt, sizeof(long), 0);
 	return true;
 }
 
@@ -76,6 +84,7 @@ int __cdecl main(void)
 	SOCKET ClientSocket2 = INVALID_SOCKET;
 
     int iSendResult;
+	int recvValue[STRLEN];
     char recvbufOne[STRLEN];
 	char recvbufTwo[STRLEN];
 	char sendbuf[STRLEN];
@@ -122,23 +131,33 @@ int __cdecl main(void)
 	SendData(ClientSocket, "w");
 	SendData(ClientSocket2, "b");
 
+	int value, myInt, netInt;
+
 	bool done = false;
 	int tmp=0;
 	while(!done){
 		
 		cout << "\nZaczyna graczI" << endl;
-		ReceiveData(ClientSocket, recvbufOne, recvbuflen);
-		cout << "GraczI: " << recvbufOne[0] << endl;
-		SendData(ClientSocket2, recvbufOne);
-		cout << "Wysylam do graczaII, pole graczaI: " << recvbufOne << endl;
-		cout << "int otrzymanej wiadomosci: " << atoi(recvbufOne) << endl;
+		recv(ClientSocket, (char *)&netInt, sizeof(long), 0);
+		value = (int)ntohl(netInt);
+		if(value==99){
+			done = true;
+		}
+		cout << "GraczI: " << value << endl;
+		SendDataInt(ClientSocket2, value);
+		cout << "Wysylam do graczaII, pole graczaI: " << value << endl;
+		//cout << "int otrzymanej wiadomosci: " << atoi(recvbufOne) << endl;
 
 		cout <<"\nKolej graczaII" << endl;
-		ReceiveData(ClientSocket2, recvbufTwo, recvbuflen);
-		cout <<"GraczII: " << recvbufTwo << endl;
-		SendData(ClientSocket, recvbufTwo);
-		cout << "Wysylam do graczaI, pole graczaII: " << recvbufTwo << endl;
-		cout << "int otrzymanej wiadomosci: " << (int)(recvbufTwo-48) << endl;
+		recv(ClientSocket2, (char *)&netInt, sizeof(long), 0);
+		value = (int)ntohl(netInt);
+		if(value==99){
+			done = true;
+		}
+		cout <<"GraczII: " << value << endl;
+		SendDataInt(ClientSocket, value);
+		cout << "Wysylam do graczaI, pole graczaII: " << value << endl;
+		//cout << "int otrzymanej wiadomosci: " << (int)(recvbufTwo-48) << endl;
 
 
 		
@@ -181,9 +200,7 @@ int __cdecl main(void)
 		//cout << "Server>" << sendbuf << endl;
 		//SendData(ClientSocket, sendbuf);
 		//SendData(ClientSocket2, sendbuf);
-		if(strcmp(recvbufOne, "koniec")==0 || strcmp(recvbufTwo, "koniec")==0){
-			done = true;
-		}
+		
 	}
 
     // shutdown the connection since we're done
